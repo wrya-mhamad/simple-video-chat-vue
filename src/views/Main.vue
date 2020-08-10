@@ -1,10 +1,10 @@
 <template>
   <v-main>
-    <Navbar :users="users" @calll="call" />
+    <Navbar :users="getUsers" @calll="call" />
     <v-container>
         <v-row align="center" justify="center">
             <v-col>
-                <video ref="local"></video>
+                <video ref="local" muted></video>
             </v-col>
             <v-col>
                 <video  ref="remote"></video>
@@ -30,21 +30,22 @@ export default {
     },
     created(){
         this.socket = io('/')
-        this.socket.on('users_list', (users) => this.users = users)
+        this.socket.on('users_list', (users) => {
+            this.users = users
+            console.log(users);
+        })
         this.openStream()
         .then(stream => {
-            //this.stream = stream
             const video = this.$refs.local
-            console.log(video);
             video.srcObject = stream;
             video.play();
         })
 
         this.peer = new Peer(undefined,{ 
             key: 'peerjs',
-            host: 'mpeer.herokuapp.com',
-            secure: true,
-            port: 443,
+            host: 'market-line.co',
+            port: 9000,
+            path: '/myapp'
         });
 
         this.peer.on('open', (id) => {
@@ -58,15 +59,21 @@ export default {
                 call.on('stream', remoteStream => {
                     this.incall = true
                     const video = this.$refs.remote
-                    console.log(video);
                     video.srcObject = remoteStream;
                     video.play();
                 });
             });
         });
-
+        
         this.socket.emit('login', JSON.parse(localStorage.getItem('user')).name)
         
+    },
+    computed: {
+        getUsers(){
+            // console.log(this.users.filter(user => user.name !== JSON.parse(localStorage.getItem('user')).name));
+            // return this.users.filter(user => user.name != JSON.parse(localStorage.getItem('user')).name)
+            return this.users
+        }
     },
     methods: {
         call(peer_id){
@@ -87,7 +94,7 @@ export default {
         
         },
         openStream(){
-            const config = { audio: false, video: true };
+            const config = { audio: true, video: true };
             return navigator.mediaDevices.getUserMedia(config)
         }
     },
